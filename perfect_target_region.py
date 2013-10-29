@@ -6,13 +6,20 @@ from flatfeature import Bed
 from pyfasta import Fasta
 
 def get_lens(exon):
-     region = abs(exon[0] - exon[1])
-     return region
-     
+    """finda the length of a tuple"""
+    region = abs(exon[0] - exon[1])
+    return region
+
+def rel_pos(gene, exon):
+    """finds pos relative to start site"""
+    rstart = exon[0] - gene['start']
+    rstop = exon[1] - gene['start']
+    return rstart,rstop
+
+
 def find_no_hits(pattern,gene_name,ref_fasta):
     no_matches = True
     remaining_keys = True
-    print "pattern",pattern
     while no_matches and remaining_keys:
         for cds in ref_fasta.keys():
             if cds == gene_name: continue
@@ -23,18 +30,24 @@ def find_no_hits(pattern,gene_name,ref_fasta):
         remaining_keys = False
     return no_matches
 
+
+
+
+
 def blast_exon(gene,exon,f):
     gene_fasta = f[gene['accn']]
-    region = range(exon[0] - gene['start'], exon[1] - gene['start'])
+    rstart, rend = rel_pos(gene, exon)
+    region = range(rstart, rend)
     unq_regions = list([(0,0)])
     consecutive = True
-    print region, gene
+    
     for start in region:
         stop = start + 19
-        consecutive = unq_regions[-1][1] == (stop -1)
         if stop > region[-1] : continue
+        
         pattern = gene_fasta[start:stop]
         no_hits = find_no_hits(pattern,gene['accn'],f)
+        consecutive = unq_regions[-1][1] == (stop -1)
         if no_hits and consecutive:
             new_end = (unq_regions[-1][0], stop)
             unq_regions = unq_regions[:-1]  + [new_end]
@@ -55,7 +68,7 @@ def main(gene_name,gene_bedfile, fastq_cds):
         exon_size = get_lens(exon)
         if exon_size >= 300:
             best_unq_region = blast_exon(gene,exon,f)
-            #print best_unq_region
+            print best_unq_region
 
 
 
